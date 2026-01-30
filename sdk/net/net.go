@@ -1,3 +1,5 @@
+//go:build wasip1
+
 /*
 Package net provides network functionality for WASM modules running in Ignis runtime.
 
