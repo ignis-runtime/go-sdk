@@ -9,10 +9,14 @@ operations to host functions provided by the Ignis runtime.
 package net
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"time"
 	"unsafe"
+
+	"github.com/ignis-runtime/go-sdk/sdk/http"
 )
 
 // HostSocketRequest represents the structure sent from the guest to the host.
@@ -87,7 +91,7 @@ type conn struct {
 }
 
 // Dial connects to the address on the named network
-func Dial(network, address string) (Conn, error) {
+func Dial(network, address string) (net.Conn, error) {
 	hostReq := HostSocketRequest{
 		Operation: "dial",
 		Address:   address,
@@ -125,7 +129,7 @@ func Dial(network, address string) (Conn, error) {
 }
 
 // DialTCP connects to the remote address on the named network
-func DialTCP(network string, laddr, raddr *TCPAddr) (Conn, error) {
+func DialTCP(network string, laddr, raddr *TCPAddr) (net.Conn, error) {
 	if raddr == nil {
 		return nil, &OpError{Op: "dial", Net: network, Err: errors.New("missing address")}
 	}
@@ -248,12 +252,12 @@ func (c *conn) Close() error {
 }
 
 // LocalAddr implements the net.Conn LocalAddr method
-func (c *conn) LocalAddr() Addr {
+func (c *conn) LocalAddr() net.Addr {
 	return &addr{network: "tcp", address: "127.0.0.1:0"} // Placeholder
 }
 
 // RemoteAddr implements the net.Conn RemoteAddr method
-func (c *conn) RemoteAddr() Addr {
+func (c *conn) RemoteAddr() net.Addr {
 	return &addr{network: "tcp", address: "127.0.0.1:30072"} // Placeholder
 }
 
@@ -355,7 +359,13 @@ func LookupHost(host string) ([]string, error) {
 	return []string{"127.0.0.1"}, nil
 }
 
+func DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	conn, err := Dial(network, address)
+	return conn, err
+}
+
 // init function to potentially register this package
 func init() {
-	// Initialization code if needed
+	http.SetWasiHTTPTransport()
+	net.DefaultResolver.Dial = DialContext
 }
